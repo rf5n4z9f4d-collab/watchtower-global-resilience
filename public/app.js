@@ -8,7 +8,7 @@ const guideLinks=[
  ['Cybersecurity alerts','https://www.cisa.gov/news-events/cybersecurity-advisories','CISA advisories'],
  ['Military & security','https://www.defense.gov/News/','Public defense news; not a global warning feed']
 ];
-let alerts=[],states=[],pushConfig={configured:false},currentSub=null,renderLimit=70,latestGenerated=null;
+let alerts=[],states=[],coverage={},pushConfig={configured:false},currentSub=null,renderLimit=70,latestGenerated=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const when=x=>{if(!x)return 'Time not provided';let d=new Date(x);return Number.isNaN(d.getTime())?'Time not provided':d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
 const numeric=(x,d=1)=>Math.min(40,Math.max(1,parseInt(x,10)||d));
@@ -24,11 +24,30 @@ $('checkList').addEventListener('change',e=>{if(e.target.matches('input[data-key
 function calc(){const p=numeric($('people').value,2),d=numeric($('days').value,7);$('waterCount').textContent=(p*d)+' gallons';$('mealCount').textContent=(p*d*3)+' meals';}
 $('people').addEventListener('input',calc);$('days').addEventListener('input',calc);calc();
 function setSystem(live){
- $('systemStatus').textContent=live+'/6 responding feeds';document.querySelector('.dot').classList.toggle('good',live>0);
+ $('systemStatus').textContent=live+'/'+(states.length||'—')+' responding feeds';document.querySelector('.dot').classList.toggle('good',live>0);
+}
+function renderCoverage(cat,n) {
+ const banner=$('sectorCoverage');
+ if(cat==='all'){
+  banner.hidden=false;
+  banner.innerHTML='<div class="coverage-title"><span class="coverage-chip neutral">PARTIAL COVERAGE</span> Cross-sector monitoring</div><p>WATCHTOWER collects selected official reports and advisories. It is not a complete register of water, 911, hospital, military, food or power infrastructure incidents.</p>';
+  return;
+ }
+ const c=coverage[cat];
+ if(!c){banner.hidden=false;banner.innerHTML='<div class="coverage-title"><span class="coverage-chip poor">NO COVERAGE DATA</span> Coverage could not be verified</div><p>Source status is unavailable. Zero results must not be interpreted as safety.</p>';return;}
+ const fullIncident=c.kind==='incident';
+ const badge=c.status==='unavailable'?'SOURCES UNAVAILABLE':c.status==='stale'?'STALE SOURCES':fullIncident?'PARTIAL INCIDENT COVERAGE':'RELATED ADVISORIES ONLY';
+ const tone=c.status==='unavailable'||c.status==='stale'?'poor':fullIncident?'partial':'neutral';
+ const links=(c.links||[]).map(x=>'<a href="'+safeUrl(x.url)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+' ↗</a>').join(' · ');
+ banner.hidden=false;
+ banner.innerHTML='<div class="coverage-title"><span class="coverage-chip '+tone+'">'+badge+'</span><strong>'+esc(cat)+'</strong></div>'+
+ '<p>'+esc(c.note||'Only selected public reports are available.')+'</p>'+
+ '<div class="coverage-extra"><span>Responding associated feeds: '+Number(c.responding||0)+'/'+Number(c.total||0)+'</span><span>Records matching current filters: '+n+'</span></div>'+
+ '<div class="coverage-links">'+links+'</div>';
 }
 function render(){
  const live=states.filter(s=>s.status==='live').length;
- $('metricLive').textContent=live+'/6';
+ $('metricLive').textContent=live+'/'+(states.length||'—');$('sourceTotal').textContent=states.length||'—';
  $('metricTotal').textContent=alerts.length.toLocaleString();
  $('metricHigh').textContent=alerts.filter(a=>a.feedStatus==='live'&&['high','critical'].includes(a.severity)).length.toLocaleString();
  $('metricTime').textContent=latestGenerated?new Date(latestGenerated).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Unknown';
@@ -37,13 +56,15 @@ function render(){
  const q=$('search').value.trim().toLowerCase(),cat=$('categoryFilter').value,sev=$('severityFilter').value,hrs=$('timeFilter').value;
  const levels={advisory:0,moderate:1,high:2,critical:3};
  const filtered=alerts.filter(a=>(cat==='all'||a.category===cat)&&(sev==='all'||levels[a.severity]>=levels[sev])&&(hrs==='all'||(a.date&&Date.now()-Date.parse(a.date)>=0&&Date.now()-Date.parse(a.date)<Number(hrs)*3600000))&&(!q||[a.title,a.summary,a.location,a.category,a.source].join(' ').toLowerCase().includes(q)));
- $('countMsg').textContent='Showing '+Math.min(renderLimit,filtered.length)+' of '+filtered.length+' matching records. Some feeds may be unavailable or delayed.';
- $('alertList').innerHTML=filtered.length?filtered.slice(0,renderLimit).map(a=>'<article class="alert-row"><div><span class="badge '+esc(a.severity)+'">'+esc(a.severity)+'</span></div><div class="alert-main"><h3>'+esc(a.title)+'</h3><p>'+esc(a.summary)+'</p><div class="alert-meta"><span>◎ '+esc(a.location||'Location not listed')+'</span><span>◷ '+when(a.date)+'</span><span>'+esc(a.source.toUpperCase())+'</span><span>'+esc(stateText(a.feedStatus))+'</span><a href="'+safeUrl(a.url)+'" target="_blank" rel="noopener noreferrer">Official source ↗</a></div></div></article>').join(''):'<div class="empty">No matching records. This does not mean there are no emergencies.</div>';
+ renderCoverage(cat,filtered.length);
+ $('countMsg').textContent='Showing '+Math.min(renderLimit,filtered.length)+' of '+filtered.length+' matching records from available sources. Coverage is incomplete.';
+ $('alertList').innerHTML=filtered.length?filtered.slice(0,renderLimit).map(a=>'<article class="alert-row"><div><span class="badge '+esc(a.severity)+'">'+esc(a.severity)+'</span></div><div class="alert-main"><h3>'+esc(a.title)+'</h3><p>'+esc(a.summary)+'</p><div class="alert-meta"><span>◎ '+esc(a.location||'Location not listed')+'</span><span>◷ '+when(a.date)+'</span><span>'+esc(a.source.toUpperCase())+'</span><span>'+esc(stateText(a.feedStatus))+'</span><a href="'+safeUrl(a.url)+'" target="_blank" rel="noopener noreferrer">Official source ↗</a></div></div></article>').join(''):'<div class="empty"><b>No matching records from the connected sources.</b><p>Filters, partial coverage, or unavailable feeds could explain this. It does not mean there are no emergencies.</p></div>';
  drawMap();
 }
 const sourcePages={
  usgs:{page:'https://earthquake.usgs.gov/earthquakes/map/'},gdacs:{page:'https://www.gdacs.org/'},nws:{page:'https://www.weather.gov/'},
- swpc:{page:'https://www.swpc.noaa.gov/'},fda:{page:'https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts'},cisa:{page:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog'}
+ swpc:{page:'https://www.swpc.noaa.gov/'},fda:{page:'https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts'},cisa:{page:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog'},
+ state:{page:'https://travel.state.gov/en/international-travel/travel-advisories.html'},cdc_travel:{page:'https://wwwnc.cdc.gov/travel/notices'}
 };
 function drawMap(){
  const svg=$('eventPins');svg.replaceChildren();
@@ -65,7 +86,7 @@ async function load(){
  $('refresh').disabled=true;$('refresh').textContent='Refreshing…';
  try{
   const r=await fetch('/api/alerts',{cache:'no-store'});if(!r.ok)throw Error('Dashboard API HTTP '+r.status);
-  const payload=await r.json();alerts=payload.alerts||[];states=payload.sources||[];latestGenerated=payload.generatedAt;
+  const payload=await r.json();alerts=payload.alerts||[];states=payload.sources||[];coverage=payload.coverage||{};latestGenerated=payload.generatedAt;
   render();
  }catch(e){$('alertList').textContent='Could not reach the alert API: '+e.message+'. No all-clear can be inferred.';$('systemStatus').textContent='Connection unavailable';}
  finally{$('refresh').disabled=false;$('refresh').textContent='↻ Refresh';}
