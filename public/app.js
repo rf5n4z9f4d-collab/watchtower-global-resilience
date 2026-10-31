@@ -111,5 +111,7 @@ async function load(){
 for(const id of ['search','categoryFilter','severityFilter','timeFilter'])$(id).addEventListener(id==='search'?'input':'change',render);
 $('refresh').addEventListener('click',load);
 setInterval(load,300000);load();
-// Free-tier Cloudflare/OneSignal push module; Render stays unchanged on main.
-import('./cloudflare-push.js').catch(e=>{$('pushMessage').textContent='Phone settings unavailable: '+e.message;});
+// Initial disabled state; cloudflare-push.js enables controls only after verified server configuration.
+$('subscribe').disabled=$('unsubscribe').disabled=$('testPush').disabled=true;
+$('pushPill').textContent='SETUP REQUIRED';
+$('pushMessage').textContent='Push is not yet active until Cloudflare and OneSignal are configured.';
