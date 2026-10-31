@@ -1,0 +1,16 @@
+{
+  "name": "watchtower-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/index.js && node --check src/sources.js && node --check src/push.js && node --test test/*.test.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply watchtower-free --remote",
+    "migrateLocal": "wrangler d1 migrations apply watchtower-free --local"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
