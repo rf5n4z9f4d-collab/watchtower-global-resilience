@@ -1,0 +1,27 @@
+name: Cloudflare free migration checks
+on:
+  push:
+    branches: [feature/cloudflare-free-migration]
+  pull_request:
+    paths:
+      - 'cloudflare/**'
+      - 'public/**'
+      - '.github/workflows/cloudflare-migration.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: cloudflare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run check
+      - name: Check no real secrets or database IDs are committed
+        run: |
+          if grep -R -E 'ONESIGNAL_REST_API_KEY=[A-Za-z0-9]{24,}' . --exclude='*.example'; then exit 1; fi
