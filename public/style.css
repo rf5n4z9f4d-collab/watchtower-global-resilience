@@ -15,3 +15,6 @@
 .coverage h3{font-size:13px;margin-bottom:8px}
 .coverage p{font-size:11px;margin:8px 0 0}
 .coverage .source-row{padding:8px 0}
+
+/* Never let component display rules override the HTML hidden state. */
+[hidden]{display:none!important}
