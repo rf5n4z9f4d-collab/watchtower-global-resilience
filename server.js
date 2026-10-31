@@ -64,11 +64,11 @@ function transform(s,v){
   const severity=/[45]$/.test(grade)?'high':/[23]$/.test(grade)?'moderate':'advisory';
   const category=/radio blackout|GPS/i.test(msg)?'Communications':'Power & energy';
   return item('swpc-'+p.product_id+'-'+p.issue_datetime+'-'+i,'swpc',category,severity,msg.split('\n').find(x=>/WARNING|WATCH|ALERT/.test(x))||'Space-weather bulletin',msg.slice(0,330)+' (Potential effects, not a confirmed outage.)',String(p.issue_datetime||'').replace(' ','T')+'Z','Potentially global','https://www.swpc.noaa.gov/products/alerts-watches-and-warnings');
- }).filter(x=>x.date&&Date.now()-Date.parse(x.date)<5*86400000);
+ }).filter(x=>x.date&&Date.now()-Date.parse(x.date)>=0&&Date.now()-Date.parse(x.date)<5*86400000);
  if(s==='fda')return (v.results||[]).slice(0,35).filter(p=>p.status!=='Terminated').map(p=>{
   return item('fda-'+(p.recall_number||p.event_id),'fda','Food & supply',p.classification==='Class I'?'high':'moderate',p.classification+' recall — '+p.product_description,p.reason_for_recall+' (Product recall, not evidence of a food shortage.)',String(p.report_date).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3'),p.distribution_pattern||p.state||'United States','https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts');
  });
- if(s==='cisa')return (v.vulnerabilities||[]).filter(p=>Date.now()-Date.parse(p.dateAdded+'T00:00:00Z')<21*86400000).slice(-45).reverse().map(p=>
+ if(s==='cisa')return (v.vulnerabilities||[]).filter(p=>{const age=Date.now()-Date.parse(p.dateAdded+'T00:00:00Z');return age>=0&&age<21*86400000;}).slice(-45).reverse().map(p=>
   item('cisa-'+p.cveID,'cisa','Cyber & data','advisory','Known exploited vulnerability — '+p.vendorProject+' '+p.product,p.shortDescription+' (This does not confirm a breach.)',p.dateAdded,'Technology worldwide','https://www.cisa.gov/known-exploited-vulnerabilities-catalog')
  );
  return [];
