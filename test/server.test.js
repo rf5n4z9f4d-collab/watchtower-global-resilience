@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.WT_TEST_MODE='1';
-const {sources,geo,tag,transform,validateFeed,pull,getCoverage,near,matches,validPrefs,validSub,handle}=await import('../server.js');
-const sample={endpoint:'https://push.example.org/send/abc',keys:{p256dh:'test-public-key',auth:'test-auth-key'}};
+const {sources,geo,tag,transform,validateFeed,pull,getCoverage,near,matches,validPrefs,validSub,trustedPushEndpoint,handle}=await import('../server.js');
+const sample={endpoint:'https://fcm.googleapis.com/fcm/send/abc',keys:{p256dh:'test-public-key',auth:'test-auth-key'}};
 const now=Date.now();
 const src=id=>sources.find(x=>x.id===id);
 const call=async(url,method='GET')=>{
@@ -114,6 +114,32 @@ test('notification subscription endpoints require HTTPS and key data',()=>{
  assert.throws(()=>validSub({endpoint:sample.endpoint,keys:{p256dh:'missing auth'}}));
 });
 
+test('push endpoints are restricted to recognized browser push services',()=>{
+ assert.equal(trustedPushEndpoint('https://fcm.googleapis.com/fcm/send/some-long-token'),true);
+ assert.equal(trustedPushEndpoint('https://web.push.apple.com/Q123456789'),true);
+ assert.equal(trustedPushEndpoint('https://updates.push.services.mozilla.com/wpush/v2/token'),true);
+ for(const malicious of [
+  'https://example.org/anything',
+  'https://fcm.googleapis.com.evil.example.org/anything',
+  'https://127.0.0.1/anything','http://fcm.googleapis.com/anything',
+  'https://user:pass@fcm.googleapis.com/path',
+  'https://fcm.googleapis.com:8443/path'
+ ])assert.equal(trustedPushEndpoint(malicious),false,malicious);
+});
+test('public feed status distinguishes actual last attempt from last successful fetch',async()=>{
+ const real=globalThis.fetch;
+ try{
+  globalThis.fetch=async()=>({ok:true,json:async()=>({features:[]})});
+  const result=await pull(src('usgs'),true);
+  assert.equal(result.status,'live');assert.ok(result.checkedAt);
+  const mock={writeHead(code,headers){this.code=code;this.headers=headers;},end(value){this.body=value}};
+  await handle({url:'/api/alerts',method:'GET',headers:{host:'localhost'}},mock);
+  const response=JSON.parse(mock.body);
+  const entry=response.sources.find(x=>x.id==='usgs');
+  assert.equal(typeof entry.checkedAt,'number');
+  assert.ok(entry.lastSuccess);
+ }finally{globalThis.fetch=real;}
+});
 test('push filter respects category and minimum severity',()=>{
  const x={category:'Earthquake',severity:'moderate',source:'usgs',coords:geo(35,-97)};
  assert.equal(matches(x,{categories:['Earthquake'],minSeverity:'high',mode:'global'}),false);
