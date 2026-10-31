@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: watchtower-global-resilience
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/status
+    envVars:
+      - key: NODE_ENV
+        value: production
