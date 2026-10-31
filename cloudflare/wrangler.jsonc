@@ -13,7 +13,7 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "watchtower-free",
-    "database_id": "REPLACE_WITH_YOUR_CLOUDFLARE_D1_UUID",
+    "database_id": "00000000-0000-0000-0000-000000000000",
     "migrations_dir": "migrations"
   }],
   "vars": {
