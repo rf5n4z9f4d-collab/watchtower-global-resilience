@@ -31,7 +31,7 @@ for(const [field,cap,def] of [['people',40,2],['days',30,7]]){
 }
 calc();
 function setSystem(live){
- $('systemStatus').textContent=live+'/'+(states.length||'—')+' responding feeds';document.querySelector('.dot').classList.toggle('good',live>0);
+ $('systemStatus').textContent=live+'/'+(states.length||'—')+' responding feeds';document.querySelector('.dot').classList.toggle('good',states.length>0&&live===states.length);
 }
 function renderCoverage(cat,n) {
  const banner=$('sectorCoverage');
@@ -57,9 +57,10 @@ function render(){
  $('metricLive').textContent=live+'/'+(states.length||'—');$('sourceTotal').textContent=states.length||'—';
  $('metricTotal').textContent=alerts.length.toLocaleString();
  $('metricHigh').textContent=alerts.filter(a=>a.feedStatus==='live'&&['high','critical'].includes(a.severity)).length.toLocaleString();
- $('metricTime').textContent=latestGenerated?new Date(latestGenerated).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Unknown';
+ const checkTimes=states.map(s=>Number(s.checkedAt)).filter(t=>Number.isFinite(t)&&t>0);
+ $('metricTime').textContent=checkTimes.length?new Date(Math.max(...checkTimes)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Not verified';
  setSystem(live);
- $('sourceList').innerHTML=states.length?states.map(s=>'<div class="source-row"><div><a href="'+safeUrl((sourcePages[s.id]||{}).page)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a><small>'+esc(s.scope)+' · '+(s.count||0)+' records · '+(s.lastSuccess?'Last success '+when(s.lastSuccess):'No successful fetch')+'</small></div><span class="state '+esc(s.status)+'">'+esc(s.status)+'</span></div>').join(''):'No feed statuses available.';
+ $('sourceList').innerHTML=states.length?states.map(s=>'<div class="source-row"><div><a href="'+safeUrl((sourcePages[s.id]||{}).page)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a><small>'+esc(s.scope)+' · '+(s.count||0)+' records · '+(s.checkedAt?'Last attempt '+when(s.checkedAt):'No fetch attempt')+' · '+(s.lastSuccess?'Last success '+when(s.lastSuccess):'No successful fetch')+'</small></div><span class="state '+esc(s.status)+'">'+esc(s.status)+'</span></div>').join(''):'No feed statuses available.';
  const q=$('search').value.trim().toLowerCase(),cat=$('categoryFilter').value,sev=$('severityFilter').value,hrs=$('timeFilter').value;
  const levels={advisory:0,moderate:1,high:2,critical:3};
  const filtered=alerts.filter(a=>(cat==='all'||a.category===cat)&&(sev==='all'||levels[a.severity]>=levels[sev])&&(hrs==='all'||(a.date&&Date.now()-Date.parse(a.date)>=0&&Date.now()-Date.parse(a.date)<Number(hrs)*3600000))&&(!q||[a.title,a.summary,a.location,a.category,a.source].join(' ').toLowerCase().includes(q)));
@@ -95,7 +96,16 @@ async function load(){
   const r=await fetch('/api/alerts',{cache:'no-store'});if(!r.ok)throw Error('Dashboard API HTTP '+r.status);
   const payload=await r.json();alerts=payload.alerts||[];states=payload.sources||[];coverage=payload.coverage||{};latestGenerated=payload.generatedAt;
   render();
- }catch(e){$('alertList').textContent='Could not reach the alert API: '+e.message+'. No all-clear can be inferred.';$('systemStatus').textContent='Connection unavailable';}
+ }catch(e){
+  alerts=[];states=[];coverage={};latestGenerated=null;
+  $('alertList').textContent='Could not reach the alert API: '+e.message+'. No all-clear can be inferred.';
+  $('systemStatus').textContent='Connection unavailable';document.querySelector('.dot').classList.remove('good');
+  $('metricLive').textContent='—';$('metricHigh').textContent='—';$('metricTotal').textContent='—';$('metricTime').textContent='Unverified';
+  $('sourceList').textContent='Source status unavailable — please try again.';
+  $('sectorCoverage').hidden=false;$('sectorCoverage').textContent='Dashboard disconnected. No sector is verified as safe.';
+  $('eventPins').replaceChildren();$('mapNote').textContent='Geographic records temporarily unavailable';
+  $('countMsg').textContent='No current data can be confirmed.';
+ }
  finally{$('refresh').disabled=false;$('refresh').textContent='↻ Refresh';}
 }
 for(const id of ['search','categoryFilter','severityFilter','timeFilter'])$(id).addEventListener(id==='search'?'input':'change',render);
