@@ -1,0 +1,17 @@
+{
+  "name": "WATCHTOWER Global Resilience Monitor",
+  "short_name": "WATCHTOWER",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071321",
+  "theme_color": "#071321",
+  "description": "Independent infrastructure and disaster alert dashboard",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
