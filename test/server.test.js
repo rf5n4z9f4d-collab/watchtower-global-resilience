@@ -147,12 +147,18 @@ test('push filter respects category and minimum severity',()=>{
  assert.equal(matches(x,{categories:['Water'],minSeverity:'moderate',mode:'global'}),false);
 });
 
-test('an invalid feed response becomes unavailable, not a fake all-clear',async()=>{
+test('an invalid response marks a previously valid feed stale, not healthy',async()=>{
  const real=globalThis.fetch;
  try{
+  globalThis.fetch=async()=>({ok:true,json:async()=>({features:[]})});
+  const healthy=await pull(src('nws'),true);
+  assert.equal(healthy.status,'live');
   globalThis.fetch=async()=>({ok:true,json:async()=>({broken:'unexpected'})});
   const state=await pull(src('nws'),true);
-  assert.equal(state.status,'unavailable');assert.match(state.error,/Unexpected JSON/);
+  assert.equal(state.status,'stale');
+  assert.equal(state.lastSuccess,healthy.lastSuccess);
+  assert.ok(state.checkedAt>=healthy.checkedAt);
+  assert.match(state.error,/Unexpected JSON/);
  }finally{globalThis.fetch=real;}
 });
 
