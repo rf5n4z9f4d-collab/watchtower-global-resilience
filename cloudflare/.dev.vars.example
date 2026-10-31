@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local-only development; DO NOT commit real secrets.
+# This ID is public but must match the OneSignal Web Push app for the final Cloudflare origin.
+ONESIGNAL_APP_ID=
+# REST API key stays on the Cloudflare server only.
+ONESIGNAL_REST_API_KEY=
+# Default is off; turn on only after end-to-end testing.
+PUSH_ENABLED=false
