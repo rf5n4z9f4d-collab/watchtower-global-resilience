@@ -36,7 +36,7 @@ function renderCoverage(cat,n) {
  const c=coverage[cat];
  if(!c){banner.hidden=false;banner.innerHTML='<div class="coverage-title"><span class="coverage-chip poor">NO COVERAGE DATA</span> Coverage could not be verified</div><p>Source status is unavailable. Zero results must not be interpreted as safety.</p>';return;}
  const fullIncident=c.kind==='incident';
- const badge=c.status==='unavailable'?'SOURCES UNAVAILABLE':c.status==='stale'?'STALE SOURCES':fullIncident?'PARTIAL INCIDENT COVERAGE':'RELATED ADVISORIES ONLY';
+ const badge=c.status==='unavailable'?'SOURCES UNAVAILABLE':c.status==='stale'?'STALE SOURCES':fullIncident?'PARTIAL INCIDENT COVERAGE':c.kind==='limited'?'VERY LIMITED COVERAGE':'RELATED ADVISORIES ONLY';
  const tone=c.status==='unavailable'||c.status==='stale'?'poor':fullIncident?'partial':'neutral';
  const links=(c.links||[]).map(x=>'<a href="'+safeUrl(x.url)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+' ↗</a>').join(' · ');
  banner.hidden=false;
