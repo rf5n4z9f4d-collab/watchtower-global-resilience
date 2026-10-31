@@ -7,7 +7,7 @@ An independent global disaster and infrastructure-risk information dashboard. WA
 ## Features
 
 - Responsive phone/desktop information dashboard.
-- Six server-side public source integrations: GDACS global disaster alerts, USGS earthquakes, U.S. NWS weather warnings, NOAA SWPC space weather, U.S. FDA food recalls, CISA exploited vulnerability catalog.
+- Eight server-side public source integrations: GDACS global disaster alerts, USGS earthquakes, U.S. NWS weather warnings, NOAA SWPC space weather, U.S. FDA food recalls, CISA exploited vulnerability catalog, State Department travel advisories, and CDC travel-health notices.
 - Search and filter by severity and category, with links to source evidence.
 - Approximate event map for geolocated earthquake/disaster reports. **Not an outage map.**
 - Source-status health checks and clear "unavailable" or "stale" indicators. Absence of records is not proof of safety.
@@ -55,7 +55,7 @@ The coverage is **partial**:
 - NOAA SWPC forecasts risks to power and communications but does not report verified local outages.
 - FDA product recalls are not food shortages.
 - CISA exploited vulnerabilities do not indicate a specific system has been breached.
-- Worldwide 911 failures, water system outages, hospital outages, military developments and leaks are **not comprehensively monitored** by these six feeds. Some weather bulletins may mention water or telecommunications, but those are not a substitute for authoritative local feeds.
+- Worldwide 911 failures, water system outages, hospital outages, military developments and leaks are **not comprehensively monitored** by these eight feeds. The State Department and CDC sources publish travel advisories, not live military incidents or hospital disruptions. Some weather bulletins may mention water or telecommunications, but those are not a substitute for authoritative local feeds.
 
 Source data is shown with attribution, may be delayed, and could be unavailable due to upstream network errors or provider changes. Keep local official Wireless Emergency Alerts, emergency radio, and provider notifications enabled. If you are in immediate danger, follow local emergency authorities rather than this website.
 
