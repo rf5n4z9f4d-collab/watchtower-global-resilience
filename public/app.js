@@ -20,7 +20,8 @@ $('categoryChecks').innerHTML=cats.map(c=>'<label><input type="checkbox" value="
 const checkItems=['Drinking water stored','Nonperishable meals','Flashlight and spare batteries','First-aid kit and medications','Battery or hand-crank radio','Charging banks and cables','Printed contacts and meeting plan','Pet and baby supplies, if needed','Important documents backed up','Fuel and evacuation route planned'];
 function readSaved(key,fallback){try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback;}catch{return fallback;}}
 function writeSaved(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{/* Storage may be disabled by browser privacy settings. */}}
-const checks=readSaved('watchtower-prep',{});
+const rawChecks=readSaved('watchtower-prep',{});
+const checks=rawChecks&&typeof rawChecks==='object'&&!Array.isArray(rawChecks)?rawChecks:{};
 $('checkList').innerHTML=checkItems.map((v,i)=>'<label><input type="checkbox" data-key="'+i+'" '+(checks[i]?'checked':'')+'>'+esc(v)+'</label>').join('');
 $('checkList').addEventListener('change',e=>{if(e.target.matches('input[data-key]')){checks[e.target.dataset.key]=e.target.checked;writeSaved('watchtower-prep',checks);}});
 function calc(){const p=numeric($('people').value,2),d=Math.min(30,numeric($('days').value,7));$('waterCount').textContent=(p*d)+' gallons';$('mealCount').textContent=(p*d*3)+' meals';}
