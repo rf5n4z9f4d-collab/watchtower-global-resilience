@@ -9,7 +9,7 @@ const timestamp=new Date().toISOString();
 const sourceIDs=['usgs','gdacs','nws','swpc','fda','cisa','state','cdc_travel'];
 const sample={
  generatedAt:timestamp,
- sources:sourceIDs.map((id,i)=>({id,name:id,scope:'Global',status:i===7?'unavailable':'live',count:1,lastSuccess:timestamp})),
+ sources:sourceIDs.map((id,i)=>({id,name:id,scope:'Global',status:i===7?'unavailable':'live',count:1,checkedAt:Date.now(),lastSuccess:timestamp})),
  coverage:{
   'Military & security':{kind:'related',status:'live',responding:1,total:1,note:'Only State Department travel advisories, not live military incidents.',links:[{title:'State Department',url:'https://travel.state.gov/'}]},
   'Water':{kind:'limited',status:'available',responding:1,total:1,note:'No complete boil-water warning coverage',links:[{title:'EPA',url:'https://www.epa.gov/'}]},
@@ -140,5 +140,28 @@ test('refresh fetches again and restores button state',async()=>{
   assert.ok(getFeedCalls()>initial);
   await new Promise(ok=>setTimeout(ok,10));
   assert.equal(d.getElementById('refresh').disabled,false);
+ }finally{dom.window.close();}
+});
+
+test('a network outage clears optimistic status counters, pins and old alerts',async()=>{
+ const {dom,d,w}=await bootstrap();
+ try{
+  assert.equal(d.getElementById('metricLive').textContent,'7/8');
+  w.fetch=async url=>{if(url==='/api/alerts')throw Error('network unavailable');return {ok:true,json:async()=>({configured:false})};};
+  d.getElementById('refresh').click();
+  for(let i=0;i<60 && d.getElementById('metricTime').textContent!=='Unverified';i++)await new Promise(ok=>setTimeout(ok,10));
+  assert.equal(d.getElementById('metricTime').textContent,'Unverified');
+  assert.equal(d.getElementById('metricTotal').textContent,'—');
+  assert.equal(d.getElementById('metricHigh').textContent,'—');
+  assert.equal(d.querySelectorAll('#eventPins circle').length,0);
+  assert.match(d.getElementById('sectorCoverage').textContent,/No sector is verified as safe/);
+  assert.match(d.getElementById('sourceList').textContent,/unavailable/);
+ }finally{dom.window.close();}
+});
+test('last checked time is grounded in actual source attempts rather than API response generation',async()=>{
+ const {dom,d}=await bootstrap();
+ try{
+  assert.notEqual(d.getElementById('metricTime').textContent,'Not verified');
+  assert.match(d.getElementById('sourceList').textContent,/Last attempt/);
  }finally{dom.window.close();}
 });
