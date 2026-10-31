@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071321"><meta name="description" content="WATCHTOWER: independently track global disaster and infrastructure risk signals from official public feeds.">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
+<title>WATCHTOWER — Global Resilience Monitor</title></head>
+<body>
+<header class="topbar"><div class="brand"><div class="shield">◉</div><div><strong>WATCHTOWER</strong><small>GLOBAL RESILIENCE MONITOR</small></div></div>
+<div class="header-right"><span class="status"><span class="dot"></span><span id="systemStatus">Connecting to official feeds</span></span><button id="refresh" class="btn ghost">↻ Refresh</button></div></header>
+<div class="layout"><aside class="sidebar"><div class="side-label">MONITORING</div>
+<a href="#overview" class="nav active">◈ Overview</a><a href="#alerts" class="nav">◉ Intelligence feed</a><a href="#map" class="nav">◎ Global event map</a>
+<a href="#sources" class="nav">▤ Source integrity</a><div class="side-label">YOUR READINESS</div>
+<a href="#notifications" class="nav">♧ Phone notifications</a><a href="#preparedness" class="nav">▣ Preparedness planner</a>
+<div class="side-note"><b>IMPORTANT</b><p>Independent situational awareness tool. Not a replacement for Wireless Emergency Alerts, first responders, local warnings, utility notices, or emergency radio.</p></div></aside>
+<main><section id="overview" class="hero"><div><div class="eyebrow">GLOBAL SITUATIONAL AWARENESS / PUBLIC INFORMATION</div>
+<h1>Know what matters.<br><em>Prepare with confidence.</em></h1>
+<p>Monitor official disaster signals, emerging hazards, and selected infrastructure risks. Clearly labeled coverage gaps and source failures — never a fabricated all-clear.</p>
+<div class="hero-actions"><a href="#alerts" class="btn primary">Explore live intelligence →</a><a href="#notifications" class="btn secondary">Enable phone alerts</a></div></div>
+<div class="hero-orbit"><div class="ring one"></div><div class="ring two"></div><div class="ring three"></div><div class="sphere">◉</div><span>GLOBAL<br>MONITOR</span></div></section>
+<section class="metrics"><article class="metric"><span>FEEDS RESPONDING</span><b id="metricLive">—</b><small>of 6 monitored sources</small></article>
+<article class="metric"><span>HIGH / CRITICAL SIGNALS</span><b id="metricHigh">—</b><small>In responding data</small></article>
+<article class="metric"><span>RECORDS RECEIVED</span><b id="metricTotal">—</b><small>Not unique worldwide crises</small></article>
+<article class="metric"><span>LAST CHECKED</span><b class="smallmetric" id="metricTime">—</b><small>Dashboard updates every 5 min</small></article></section>
+<section id="alerts" class="panel"><div class="section-head"><div><div class="eyebrow">INTELLIGENCE STREAM</div><h2>Latest public-source signals</h2><p>Evidence-based entries; impacts and severity vary by provider.</p></div><span class="pill">MONITORED FEEDS</span></div>
+<div class="controls"><label class="search"><span>⌕</span><input id="search" placeholder="Search incidents, places, categories..."></label>
+<select id="categoryFilter" aria-label="Category"><option value="all">All sectors</option></select>
+<select id="severityFilter" aria-label="Severity"><option value="all">Any severity</option><option value="critical">Critical</option><option value="high">High+</option><option value="moderate">Moderate+</option></select>
+<select id="timeFilter" aria-label="Age"><option value="all">Any time</option><option value="24">Past 24 hours</option><option value="168">Past 7 days</option></select></div>
+<div id="alertList" class="alert-list"><div class="loading">Connecting to public incident feeds…</div></div><div class="alert-footer" id="countMsg">—</div></section>
+<div class="columns"><section id="map" class="panel"><div class="section-head"><div><div class="eyebrow">GEOGRAPHIC PICTURE</div><h2>Geolocated events</h2><p>Only records with source coordinates. Not an infrastructure outage map.</p></div></div>
+<div class="world-map"><svg id="mapSvg" viewBox="0 0 720 370" aria-label="World plot using approximate longitude and latitude"><defs><pattern id="grid" width="60" height="37" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 37" fill="none" stroke="#ffffff" stroke-opacity=".09" stroke-width="1"/></pattern></defs><rect width="720" height="370" rx="14" fill="#091d2e"/><rect width="720" height="370" fill="url(#grid)"/><path d="M 63 91 Q 105 50 148 71 L 182 91 206 130 190 174 155 191 133 159 100 151 83 123 52 126 Z M 174 183 Q 201 179 220 226 L 209 290 188 339 168 321 159 262 147 218 Z M 315 97 Q 348 69 371 85 L 392 118 387 153 368 191 348 236 333 211 320 165 Z M 375 91 Q 420 50 510 70 L 566 77 631 97 653 141 615 170 566 150 542 190 500 168 480 216 450 185 404 152 Z M 583 269 Q 619 246 655 270 L 669 300 640 323 594 306 Z" fill="#174255" opacity=".82" stroke="#2b6b79" stroke-width="1.5"/><g id="eventPins"></g></svg><div id="mapNote" class="map-note">Waiting for geolocated records…</div></div></section>
+<section id="sources" class="panel"><div class="section-head"><div><div class="eyebrow">DATA TRANSPARENCY</div><h2>Source integrity</h2><p>Unreachable feeds are shown as unavailable, not safe.</p></div></div><div id="sourceList" class="source-list">Checking provider availability…</div></section></div>
+<section id="notifications" class="panel"><div class="section-head"><div><div class="eyebrow">YOUR EARLY WARNING SETUP</div><h2>Phone notifications</h2><p>Opt in to new alerts from monitored feeds. iPhone users must open the site from a Home Screen installation.</p></div><span class="pill" id="pushPill">CHECKING SETUP</span></div>
+<div class="push-grid"><div><div id="pushMessage" class="notice">Checking notification availability…</div>
+<div class="field"><label for="pushSeverity">Minimum urgency</label><select id="pushSeverity"><option value="critical">Critical only</option><option value="high" selected>High and critical</option><option value="moderate">Moderate and above</option></select></div>
+<div class="field"><label for="pushMode">Geographic coverage</label><select id="pushMode"><option value="global">Worldwide</option><option value="nearby">Near my location (geolocated records)</option></select></div>
+<div class="field" id="radiusRow" hidden><label for="pushRadius">Nearby distance</label><select id="pushRadius"><option value="50">50 km</option><option value="100" selected>100 km</option><option value="250">250 km</option><option value="500">500 km</option></select><small>Some area-based bulletins cannot be matched accurately; nearby delivery is not complete local coverage.</small></div>
+<p class="field-label">Notify me about</p><div id="categoryChecks" class="checks"></div>
+<div class="push-buttons"><button id="subscribe" class="btn primary">Enable alerts</button><button id="testPush" class="btn secondary">Send test</button><button id="unsubscribe" class="btn ghost">Turn off</button></div><div id="pushResult" class="helper" role="status"></div></div>
+<div class="push-guide"><strong>How iPhone alerts work</strong><ol><li>Open this live website in Safari.</li><li>Tap <b>Share → Add to Home Screen</b>.</li><li>Open WATCHTOWER from its Home Screen icon.</li><li>Select your preferences and tap <b>Enable alerts</b>.</li><li>Allow notifications, then send a test.</li></ol><p>Push requires an always-on server, durable storage, and secure VAPID keys. It is not active until the server reports configured.</p><p class="warning">Notifications cannot be guaranteed during an internet or power outage. Keep official local alerts enabled.</p></div></div></section>
+<section id="preparedness" class="panel"><div class="section-head"><div><div class="eyebrow">HOUSEHOLD READINESS</div><h2>Preparedness planner</h2><p>Practical supplies you can organize before something happens.</p></div></div>
+<div class="prep-grid"><div><div class="prep-inputs"><label>People<input id="people" type="number" min="1" max="40" value="2"></label><label>Days<input id="days" type="number" min="1" max="30" value="7"></label></div>
+<div class="supply"><div><small>MINIMUM WATER SUPPLY</small><strong id="waterCount">14 gallons</strong><span>Based on 1 gallon per person per day</span></div><div><small>FOOD PORTIONS</small><strong id="mealCount">42 meals</strong><span>3 meals per person per day</span></div></div></div>
+<div><h3>Household checklist</h3><div id="checkList" class="prep-list"></div><div class="helper">Your checklist stays in this browser. Keep essential contacts and information offline.</div></div></div></section>
+<footer><strong>WATCHTOWER</strong><p>Independent preparedness dashboard · Partial public data feeds · Not an official emergency service · <a href="https://www.ready.gov/alerts" target="_blank" rel="noopener">Official alerts and warnings</a></p></footer>
+</main></div><script src="/app.js" type="module"></script></body></html>
