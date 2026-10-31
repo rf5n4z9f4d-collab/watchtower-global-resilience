@@ -154,8 +154,19 @@ function validPrefs(p){
  if(mode==='nearby'&&(p.lat==null||p.lon==null||!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180))throw Error('Nearby alerts require a valid location');
  return {categories:selected,minSeverity:['critical','high','moderate'].includes(p.minSeverity)?p.minSeverity:'high',mode,lat:mode==='nearby'?lat:null,lon:mode==='nearby'?lon:null,radiusKm:[50,100,250,500].includes(Number(p.radiusKm))?Number(p.radiusKm):100};
 }
+function trustedPushEndpoint(endpoint){
+ try{
+  const u=new URL(endpoint);
+  const h=u.hostname.toLowerCase();
+  if(u.protocol!=='https:'||u.username||u.password||u.port||!u.pathname||u.pathname==='/')return false;
+  return h==='fcm.googleapis.com' || h==='push.apple.com' || h.endsWith('.push.apple.com') ||
+    h==='push.services.mozilla.com' || h.endsWith('.push.services.mozilla.com') ||
+    h==='push.opera.com' || h.endsWith('.push.opera.com') ||
+    h==='notify.windows.com' || h.endsWith('.notify.windows.com');
+ }catch{return false;}
+}
 function validSub(s){
- if(!s||typeof s.endpoint!=='string'||s.endpoint.length>2048||!s.endpoint.startsWith('https://')||typeof s.keys?.p256dh!=='string'||typeof s.keys?.auth!=='string'||s.keys.p256dh.length>512||s.keys.auth.length>512)throw Error('Invalid browser subscription');
+ if(!s||typeof s.endpoint!=='string'||s.endpoint.length>2048||!trustedPushEndpoint(s.endpoint)||typeof s.keys?.p256dh!=='string'||typeof s.keys?.auth!=='string'||s.keys.p256dh.length>512||s.keys.auth.length>512)throw Error('Invalid browser subscription');
  return s;
 }
 async function worker(){
@@ -201,7 +212,7 @@ async function handle(req,res){
   if(req.method==='GET'&&u.pathname==='/api/alerts'){
    const states=await fetchAll(false);
    const alerts=states.flatMap(s=>s.entries.map(({geometry,...a})=>({...a,feedStatus:s.status}))).sort((a,b)=>Date.parse(b.date||0)-Date.parse(a.date||0));
-   return respond(res,200,{generatedAt:new Date().toISOString(),alerts,coverage:getCoverage(states),sources:states.map(({id,name,scope,status,count,lastSuccess,error})=>({id,name,scope,status,count,lastSuccess,error})),disclaimer:'This dashboard does not cover all hazards. Records may be delayed, duplicated, or unrelated to actual infrastructure outages. It is not an emergency warning system.'});
+   return respond(res,200,{generatedAt:new Date().toISOString(),alerts,coverage:getCoverage(states),sources:states.map(({id,name,scope,status,count,checkedAt,lastSuccess,error})=>({id,name,scope,status,count,checkedAt,lastSuccess,error})),disclaimer:'This dashboard does not cover all hazards. Records may be delayed, duplicated, or unrelated to actual infrastructure outages. It is not an emergency warning system.'});
   }
   if(req.method==='GET'&&u.pathname==='/api/push/config')return respond(res,200,{configured:ready,persistent:ready,publicKey:ready?process.env.VAPID_PUBLIC_KEY:null});
   if(req.method==='POST'&&u.pathname.startsWith('/api/push/')){
@@ -244,4 +255,4 @@ if(process.env.WT_TEST_MODE!=='1'){
  server.listen(PORT,()=>console.log('WATCHTOWER listening on '+PORT));
  if(ready){worker();setInterval(worker,120000).unref();}
 }
-export {sources,geo,tag,transform,validateFeed,pull,getCoverage,near,matches,validPrefs,validSub,handle};
+export {sources,geo,tag,transform,validateFeed,pull,getCoverage,near,matches,validPrefs,validSub,trustedPushEndpoint,handle};
