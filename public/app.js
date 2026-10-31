@@ -25,7 +25,11 @@ const checks=rawChecks&&typeof rawChecks==='object'&&!Array.isArray(rawChecks)?r
 $('checkList').innerHTML=checkItems.map((v,i)=>'<label><input type="checkbox" data-key="'+i+'" '+(checks[i]?'checked':'')+'>'+esc(v)+'</label>').join('');
 $('checkList').addEventListener('change',e=>{if(e.target.matches('input[data-key]')){checks[e.target.dataset.key]=e.target.checked;writeSaved('watchtower-prep',checks);}});
 function calc(){const p=numeric($('people').value,2),d=Math.min(30,numeric($('days').value,7));$('waterCount').textContent=(p*d)+' gallons';$('mealCount').textContent=(p*d*3)+' meals';}
-$('people').addEventListener('input',calc);$('days').addEventListener('input',calc);calc();
+$('people').addEventListener('input',calc);$('days').addEventListener('input',calc);
+for(const [field,cap,def] of [['people',40,2],['days',30,7]]){
+ $(field).addEventListener('change',()=>{const value=Math.min(cap,numeric($(field).value,def));$(field).value=String(value);calc();});
+}
+calc();
 function setSystem(live){
  $('systemStatus').textContent=live+'/'+(states.length||'—')+' responding feeds';document.querySelector('.dot').classList.toggle('good',live>0);
 }
