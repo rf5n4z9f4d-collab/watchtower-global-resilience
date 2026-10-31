@@ -8,6 +8,7 @@ const guideLinks=[
  ['Cybersecurity alerts','https://www.cisa.gov/news-events/cybersecurity-advisories','CISA advisories'],
  ['Military & security','https://www.defense.gov/News/','Public defense news; not a global warning feed']
 ];
+$('coverageGaps').innerHTML=guideLinks.map(([title,link,detail])=>'<div class="source-row"><div><a href="'+safeUrl(link)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+' ↗</a><small>'+esc(detail)+'</small></div><span class="state">Reference</span></div>').join('');
 let alerts=[],states=[],pushConfig={configured:false},currentSub=null,renderLimit=70,latestGenerated=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const when=x=>{if(!x)return 'Time not provided';let d=new Date(x);return Number.isNaN(d.getTime())?'Time not provided':d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
