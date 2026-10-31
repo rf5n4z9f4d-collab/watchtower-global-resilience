@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "check": "node --check server.js && node --check public/app.js && node --test"
+    "check": "node --check server.js && node --check public/app.js && node --test",
+    "prestart": "node --check server.js && node --check public/app.js && node --test test/server.test.js"
   },
   "engines": {
     "node": ">=20"
