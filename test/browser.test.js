@@ -5,6 +5,7 @@ import {JSDOM} from 'jsdom';
 
 const html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');
 const js=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
+const css=await readFile(new URL('../public/style.css',import.meta.url),'utf8');
 const timestamp=new Date().toISOString();
 const sourceIDs=['usgs','gdacs','nws','swpc','fda','cisa','state','cdc_travel'];
 const sample={
@@ -163,5 +164,21 @@ test('last checked time is grounded in actual source attempts rather than API re
  try{
   assert.notEqual(d.getElementById('metricTime').textContent,'Not verified');
   assert.match(d.getElementById('sourceList').textContent,/Last attempt/);
+ }finally{dom.window.close();}
+});
+
+test('Worldwide notification mode hides nearby distance; nearby mode reveals it',async()=>{
+ const {dom,d,w}=await bootstrap();
+ try{
+  const style=d.createElement('style');style.textContent=css;d.head.appendChild(style);
+  const row=d.getElementById('radiusRow');
+  assert.equal(row.hidden,true);
+  assert.equal(w.getComputedStyle(row).display,'none');
+  change(w,d,'pushMode','nearby');
+  assert.equal(row.hidden,false);
+  assert.notEqual(w.getComputedStyle(row).display,'none');
+  change(w,d,'pushMode','global');
+  assert.equal(row.hidden,true);
+  assert.equal(w.getComputedStyle(row).display,'none');
  }finally{dom.window.close();}
 });
