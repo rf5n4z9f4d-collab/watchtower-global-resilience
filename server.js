@@ -14,7 +14,9 @@ const sources=[
  {id:'nws',name:'National Weather Service',scope:'United States',url:'https://api.weather.gov/alerts/active',page:'https://www.weather.gov/',type:'json'},
  {id:'swpc',name:'NOAA Space Weather',scope:'Global',url:'https://services.swpc.noaa.gov/products/alerts.json',page:'https://www.swpc.noaa.gov/',type:'json'},
  {id:'fda',name:'FDA Food Recalls',scope:'United States',url:'https://api.fda.gov/food/enforcement.json?search=status%3A%22Ongoing%22&sort=report_date%3Adesc&limit=35',page:'https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts',type:'json'},
- {id:'cisa',name:'CISA Known Exploited Vulnerabilities',scope:'Technology worldwide',url:'https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json',page:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog',type:'json'}
+ {id:'cisa',name:'CISA Known Exploited Vulnerabilities',scope:'Technology worldwide',url:'https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json',page:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog',type:'json'},
+ {id:'state',name:'U.S. State Department Travel Advisories',scope:'Worldwide travel safety',url:'https://travel.state.gov/_res/rss/TAsTWs.xml',page:'https://travel.state.gov/en/international-travel/travel-advisories.html',type:'xml'},
+ {id:'cdc_travel',name:'CDC Travel Health Notices',scope:'Worldwide public-health travel risks',url:'https://wwwnc.cdc.gov/travel/rss/notices.xml',page:'https://wwwnc.cdc.gov/travel/notices',type:'xml'}
 ];
 const cleaned=x=>String(x??'').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/\s+/g,' ').trim();
 const date=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?null:d.toISOString();};
@@ -35,6 +37,21 @@ function transform(s,v){
   const category=code==='EQ'?'Earthquake':'Climate & disasters';
   const g=tag(x,'georss:point').split(' ');
   return item('gdacs-'+code+'-'+(tag(x,'gdacs:eventid')||tag(x,'guid')||i),'gdacs',category,color==='red'?'critical':color==='orange'?'high':'advisory',tag(x,'title'),tag(x,'description')+' (GDACS ranks potential humanitarian impact, not confirmed infrastructure damage.)',tag(x,'pubDate')||tag(x,'dc:date'),tag(x,'gdacs:country')||'Worldwide',tag(x,'link'),geo(tag(x,'geo:lat')||g[0],tag(x,'geo:long')||g[1]));
+ }).filter(x=>x.title&&x.date);
+ if(s==='state')return [...v.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)].slice(0,120).map(([_,x],i)=>{
+  const title=tag(x,'title'), level=Number((title.match(/Level\s+([1-4])/i)||[])[1]||0);
+  const location=title.replace(/\s*[-–]\s*Level\s+[1-4].*$/i,'').trim()||'International travel';
+  return item('state-'+(tag(x,'guid')||tag(x,'link')||i),'state','Military & security',level>=3?'moderate':'advisory',
+   'Travel safety advisory — '+title,
+   'U.S. State Department travel advisory (not a military incident, military alert, or confirmed infrastructure outage). '+tag(x,'description').slice(0,200),
+   tag(x,'pubDate')||tag(x,'dc:date'),location,tag(x,'link'));
+ }).filter(x=>x.title&&x.date);
+ if(s==='cdc_travel')return [...v.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)].slice(0,100).map(([_,x],i)=>{
+  const title=tag(x,'title'), level=Number((title.match(/Level\s+([1-4])/i)||[])[1]||0);
+  return item('cdc-'+(tag(x,'guid')||tag(x,'link')||i),'cdc_travel','Healthcare',level>=4?'moderate':'advisory',
+   'Travel health notice — '+title,
+   'CDC travel health notice (not a confirmed hospital disruption). '+tag(x,'description').slice(0,220),
+   tag(x,'pubDate')||tag(x,'dc:date'),title.replace(/^Level\s+[1-4]\s*[-–]\s*/i,'').slice(0,110),tag(x,'link'));
  }).filter(x=>x.title&&x.date);
  if(s==='nws')return (v.features||[]).filter(f=>!f.properties?.status||f.properties.status==='Actual').filter(f=>['Extreme','Severe','Moderate'].includes(f.properties?.severity)).slice(0,140).map(f=>{
   const p=f.properties;
@@ -71,6 +88,27 @@ async function pull(s,force=false){
   cache.set(s.id,state);return state;
  }
 }
+const sectorDescriptions={
+ 'Earthquake':{sourceIds:['usgs','gdacs'],kind:'incident',note:'USGS earthquake reports and GDACS disaster evaluations. These do not verify infrastructure damage.',links:[{title:'USGS',url:'https://earthquake.usgs.gov/earthquakes/map/'}]},
+ 'Climate & disasters':{sourceIds:['gdacs','nws'],kind:'incident',note:'Global disaster signals plus severe U.S. weather warnings; global weather coverage is incomplete.',links:[{title:'GDACS',url:'https://www.gdacs.org/'}]},
+ 'Power & energy':{sourceIds:['swpc'],kind:'related',note:'Space-weather risks to power systems only. Not a feed of verified grid failures or utility outages.',links:[{title:'NOAA SWPC',url:'https://www.swpc.noaa.gov/'}]},
+ 'Food & supply':{sourceIds:['fda'],kind:'related',note:'FDA food product recalls, not supply chain disruptions or food shortages.',links:[{title:'FDA Recalls',url:'https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts'}]},
+ 'Communications':{sourceIds:['swpc','nws'],kind:'related',note:'Potential radio, GPS, and severe-weather communication impacts only. No dedicated 911 outage feed.',links:[{title:'FCC Emergency',url:'https://www.fcc.gov/emergency'}]},
+ 'Cyber & data':{sourceIds:['cisa'],kind:'related',note:'Actively exploited vulnerabilities, not proof of active attacks, infrastructure compromises, or information leaks.',links:[{title:'CISA',url:'https://www.cisa.gov/news-events/cybersecurity-advisories'}]},
+ 'Water':{sourceIds:['nws'],kind:'limited',note:'Only some U.S. weather bulletins mentioning water safety. No comprehensive contamination, boil-water or treatment-plant outage feed.',links:[{title:'EPA',url:'https://www.epa.gov/ground-water-and-drinking-water'}]},
+ 'Healthcare':{sourceIds:['cdc_travel'],kind:'related',note:'CDC travel health notices, not hospital shutdowns, patient-care interruptions or hospital cyber incidents.',links:[{title:'CDC Health Alert Network',url:'https://www.cdc.gov/han/index.html'}]},
+ 'Military & security':{sourceIds:['state'],kind:'related',note:'U.S. State Department international travel-safety advisories. No live military operation, mobilization, or conflict incident feed is connected.',links:[{title:'DHS National Terrorism Advisory System',url:'https://www.dhs.gov/national-terrorism-advisory-system'},{title:'State Department',url:'https://travel.state.gov/en/international-travel/travel-advisories.html'}]},
+ 'Humanitarian':{sourceIds:['gdacs'],kind:'related',note:'GDACS disaster-impact estimates; not comprehensive conflict, migration, or humanitarian emergency reporting.',links:[{title:'ReliefWeb',url:'https://reliefweb.int/'}]}
+};
+function getCoverage(states){
+ const byId=new Map(states.map(x=>[x.id,x]));
+ return Object.fromEntries(Object.entries(sectorDescriptions).map(([sector,info])=>{
+  const feeds=info.sourceIds.map(id=>byId.get(id)).filter(Boolean);
+  const responding=feeds.filter(x=>x.status==='live').length;
+  return [sector,{kind:info.kind,status:responding>0?'available':feeds.some(x=>x.status==='stale')?'stale':'unavailable',responding,total:info.sourceIds.length,note:info.note,links:info.links}];
+ }));
+}
+
 const fetchAll=force=>Promise.all(sources.map(s=>pull(s,force)));
 let webpush=null,db=null,ready=false,lastCheck=null,lastWorkerError=null,seen=null;
 const testTimestamps=new Map();
@@ -153,7 +191,7 @@ async function handle(req,res){
   if(req.method==='GET'&&u.pathname==='/api/alerts'){
    const states=await fetchAll(false);
    const alerts=states.flatMap(s=>s.entries.map(({geometry,...a})=>({...a,feedStatus:s.status}))).sort((a,b)=>Date.parse(b.date||0)-Date.parse(a.date||0));
-   return respond(res,200,{generatedAt:new Date().toISOString(),alerts,sources:states.map(({id,name,scope,status,count,lastSuccess,error})=>({id,name,scope,status,count,lastSuccess,error})),disclaimer:'This dashboard does not cover all hazards. Records may be delayed, duplicated, or unrelated to actual infrastructure outages. It is not an emergency warning system.'});
+   return respond(res,200,{generatedAt:new Date().toISOString(),alerts,coverage:getCoverage(states),sources:states.map(({id,name,scope,status,count,lastSuccess,error})=>({id,name,scope,status,count,lastSuccess,error})),disclaimer:'This dashboard does not cover all hazards. Records may be delayed, duplicated, or unrelated to actual infrastructure outages. It is not an emergency warning system.'});
   }
   if(req.method==='GET'&&u.pathname==='/api/push/config')return respond(res,200,{configured:ready,persistent:ready,publicKey:ready?process.env.VAPID_PUBLIC_KEY:null});
   if(req.method==='POST'&&u.pathname.startsWith('/api/push/')){
