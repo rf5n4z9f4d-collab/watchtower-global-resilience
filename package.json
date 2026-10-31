@@ -7,7 +7,8 @@
     "start": "node server.js",
     "test": "node --test",
     "check": "node --check server.js && node --check public/app.js && node --test",
-    "prestart": "node --check server.js && node --check public/app.js && node --test test/server.test.js && node scripts/feed-probe.mjs"
+    "prestart": "node --check server.js && node --check public/app.js && node --test test/server.test.js",
+    "audit:feeds": "node scripts/feed-probe.mjs"
   },
   "engines": {
     "node": ">=20"
