@@ -1,0 +1,20 @@
+name: WATCHTOWER regression tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test dependencies
+        run: npm install --include=dev --no-audit --no-fund
+      - name: Check syntax and run backend/browser tests
+        run: npm run check
