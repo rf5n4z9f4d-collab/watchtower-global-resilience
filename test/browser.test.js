@@ -100,6 +100,7 @@ test('preparedness calculator updates water and food requirements',async()=>{
   assert.equal(d.getElementById('waterCount').textContent,'15 gallons');
   assert.equal(d.getElementById('mealCount').textContent,'45 meals');
   change(w,d,'days','100','input');assert.equal(d.getElementById('waterCount').textContent,'90 gallons');
+  change(w,d,'days','100','change');assert.equal(d.getElementById('days').value,'30');
  }finally{dom.window.close();}
 });
 test('checklist changes are saved and corrupted prior storage cannot crash startup',async()=>{
