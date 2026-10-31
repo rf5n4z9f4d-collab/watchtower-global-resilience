@@ -11,17 +11,19 @@ const guideLinks=[
 let alerts=[],states=[],coverage={},pushConfig={configured:false},currentSub=null,renderLimit=70,latestGenerated=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const when=x=>{if(!x)return 'Time not provided';let d=new Date(x);return Number.isNaN(d.getTime())?'Time not provided':d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
-const numeric=(x,d=1)=>Math.min(40,Math.max(1,parseInt(x,10)||d));
+const numeric=(x,d=1)=>Math.min(40,Math.max(1,Number.parseInt(x,10)||d));
 const safeUrl=x=>{try{const u=new URL(x);return u.protocol==='https:'?u.href:'#';}catch{return '#';}};
 $('coverageGaps').innerHTML=guideLinks.map(([title,link,detail])=>'<div class="source-row"><div><a href="'+safeUrl(link)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+' ↗</a><small>'+esc(detail)+'</small></div><span class="state">Reference</span></div>').join('');
 const stateText=s=>s==='live'?'Live':'Stale / delayed';
 $('categoryFilter').innerHTML='<option value="all">All sectors</option>'+cats.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
 $('categoryChecks').innerHTML=cats.map(c=>'<label><input type="checkbox" value="'+esc(c)+'" '+(['Earthquake','Climate & disasters','Power & energy','Communications'].includes(c)?'checked':'')+'>'+esc(c)+'</label>').join('');
 const checkItems=['Drinking water stored','Nonperishable meals','Flashlight and spare batteries','First-aid kit and medications','Battery or hand-crank radio','Charging banks and cables','Printed contacts and meeting plan','Pet and baby supplies, if needed','Important documents backed up','Fuel and evacuation route planned'];
-const checks=JSON.parse(localStorage.getItem('watchtower-prep')||'{}');
+function readSaved(key,fallback){try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback;}catch{return fallback;}}
+function writeSaved(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{/* Storage may be disabled by browser privacy settings. */}}
+const checks=readSaved('watchtower-prep',{});
 $('checkList').innerHTML=checkItems.map((v,i)=>'<label><input type="checkbox" data-key="'+i+'" '+(checks[i]?'checked':'')+'>'+esc(v)+'</label>').join('');
-$('checkList').addEventListener('change',e=>{if(e.target.matches('input[data-key]')){checks[e.target.dataset.key]=e.target.checked;localStorage.setItem('watchtower-prep',JSON.stringify(checks));}});
-function calc(){const p=numeric($('people').value,2),d=numeric($('days').value,7);$('waterCount').textContent=(p*d)+' gallons';$('mealCount').textContent=(p*d*3)+' meals';}
+$('checkList').addEventListener('change',e=>{if(e.target.matches('input[data-key]')){checks[e.target.dataset.key]=e.target.checked;writeSaved('watchtower-prep',checks);}});
+function calc(){const p=numeric($('people').value,2),d=Math.min(30,numeric($('days').value,7));$('waterCount').textContent=(p*d)+' gallons';$('mealCount').textContent=(p*d*3)+' meals';}
 $('people').addEventListener('input',calc);$('days').addEventListener('input',calc);calc();
 function setSystem(live){
  $('systemStatus').textContent=live+'/'+(states.length||'—')+' responding feeds';document.querySelector('.dot').classList.toggle('good',live>0);
@@ -113,7 +115,7 @@ async function updatePush(){
 $('pushMode').addEventListener('change',()=>{$('radiusRow').hidden=$('pushMode').value!=='nearby';});
 const base64ToBytes=b=>{const safe=b.replace(/-/g,'+').replace(/_/g,'/');const raw=atob(safe+'='.repeat((4-safe.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0));};
 const post=async(endpoint,body)=>{const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const json=await r.json();if(!r.ok)throw Error(json.error||'Request failed');return json;};
-const storedPrefs=JSON.parse(localStorage.getItem('wt-prefs')||'null');
+const storedPrefs=readSaved('wt-prefs',null);
 if(storedPrefs){
  $('pushSeverity').value=storedPrefs.minSeverity||'high';$('pushMode').value=storedPrefs.mode||'global';$('pushRadius').value=String(storedPrefs.radiusKm||100);
  $('radiusRow').hidden=$('pushMode').value!=='nearby';
@@ -137,7 +139,7 @@ $('subscribe').addEventListener('click',async()=>{
   let sub=await reg.pushManager.getSubscription();
   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64ToBytes(pushConfig.publicKey)});
   await post('/api/push/subscribe',{subscription:sub.toJSON(),preferences:prefs});currentSub=sub;
-  localStorage.setItem('wt-prefs',JSON.stringify({...prefs,lat:null,lon:null}));
+  writeSaved('wt-prefs',{...prefs,lat:null,lon:null});
   statusMessage('Phone subscribed. Tap Send test to check on-device delivery. This is not a substitute for local emergency alerts.');
  }catch(e){statusMessage(e.message,true)}
  finally{$('subscribe').disabled=false;}
