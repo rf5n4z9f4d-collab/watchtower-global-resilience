@@ -20,7 +20,7 @@ const sources=[
 ];
 const cleaned=x=>String(x??'').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/\s+/g,' ').trim();
 const date=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?null:d.toISOString();};
-const geo=(lat,lon)=>Number.isFinite(Number(lat))&&Number.isFinite(Number(lon))&&Math.abs(lat)<=90&&Math.abs(lon)<=180?{lat:Number(lat),lon:Number(lon)}:null;
+const geo=(lat,lon)=>lat!=null&&lon!=null&&String(lat).trim()!==''&&String(lon).trim()!==''&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lon))&&Math.abs(Number(lat))<=90&&Math.abs(Number(lon))<=180?{lat:Number(lat),lon:Number(lon)}:null;
 const https=(value,base)=>{try{let u=new URL(value);return u.protocol==='https:'?u.href:base;}catch{return base;}};
 function item(id,source,category,severity,title,summary,time,location,link,coords=null,geometry=null){
  const s=sources.find(x=>x.id===source);
@@ -73,6 +73,15 @@ function transform(s,v){
  );
  return [];
 }
+function validateFeed(s,raw){
+ if(s.type==='xml'){
+  if(typeof raw!=='string'||!/<rss\b/i.test(raw)||!/<channel\b/i.test(raw)||!/<\/channel>/i.test(raw))throw Error('Unexpected XML feed format');
+  return;
+ }
+ const arrays={usgs:'features',nws:'features',fda:'results',cisa:'vulnerabilities'};
+ if(s.id==='swpc'&&!Array.isArray(raw))throw Error('Unexpected space-weather feed format');
+ if(arrays[s.id]&&!Array.isArray(raw?.[arrays[s.id]]))throw Error('Unexpected JSON feed format');
+}
 async function pull(s,force=false){
  const old=cache.get(s.id);
  if(!force&&old&&Date.now()-old.checkedAt<CACHE_MS)return old;
@@ -80,6 +89,7 @@ async function pull(s,force=false){
   const response=await fetch(s.url,{headers:{'User-Agent':'WATCHTOWER resilience-monitor (information dashboard)','Accept':'application/json, application/xml, */*'},signal:AbortSignal.timeout(16000)});
   if(!response.ok)throw Error('Upstream HTTP '+response.status);
   const raw=s.type==='xml'?await response.text():await response.json();
+  validateFeed(s,raw);
   const entries=transform(s.id,raw);
   const state={id:s.id,name:s.name,scope:s.scope,checkedAt:Date.now(),lastSuccess:new Date().toISOString(),status:'live',count:entries.length,entries};
   cache.set(s.id,state);return state;
@@ -228,7 +238,10 @@ async function handle(req,res){
   res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'public,max-age=300','X-Content-Type-Options':'nosniff'});res.end(data);
  }catch(e){respond(res,400,{error:String(e.message).slice(0,130)});}
 }
-await initPush();
-const server=http.createServer(handle);
-server.listen(PORT,()=>console.log('WATCHTOWER listening on '+PORT));
-if(ready){worker();setInterval(worker,120000).unref();}
+if(process.env.WT_TEST_MODE!=='1'){
+ await initPush();
+ const server=http.createServer(handle);
+ server.listen(PORT,()=>console.log('WATCHTOWER listening on '+PORT));
+ if(ready){worker();setInterval(worker,120000).unref();}
+}
+export {sources,geo,tag,transform,validateFeed,pull,getCoverage,near,matches,validPrefs,validSub,handle};
