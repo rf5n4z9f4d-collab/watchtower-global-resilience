@@ -69,7 +69,7 @@ $("subscribe").addEventListener("click",async()=>{
  try{
   if(!config?.configured)throw Error("Push server is not configured");
   const prefs=getPreferences(),OS=await loadSdk();
-  if(!OS.Notifications.isPushSupported())throw Error("This browser does not support web push. iPhone requires a Home Screen web app.");
+  if(!(await OS.Notifications.isPushSupported()))throw Error("This browser does not support web push. iPhone requires a Home Screen web app.");
   await OS.Notifications.requestPermission();
   if(!OS.Notifications.permission)throw Error("Notification permission was not granted");
   const tags=Object.fromEntries(keys.map(k=>["wt_"+k,prefs.groups.includes(k)?"1":"0"]));
