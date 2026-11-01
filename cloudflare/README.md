@@ -68,3 +68,7 @@ https://documentation.onesignal.com/docs/en/web-sdk-reference
 https://documentation.onesignal.com/reference/create-message
 https://documentation.onesignal.com/reference/idempotent-notification-requests
 https://onesignal.com/pricing
+
+## Deployment verification
+
+After a production Git-triggered build, verify `/api/push/config` returns JSON with `provider: onesignal` and `configured: false`; verify `/api/status` returns eight feed definitions. A ready uploaded static-only version is not proof the API is working. Keep push disabled until an iPhone test succeeds.
