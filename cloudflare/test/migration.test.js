@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {SOURCES,SECTORS,parseSource,readSource} from "../src/sources.js";
 import {GROUPS,groupFor,buildFilters,sendOneSignal} from "../src/push.js";
 import {handleAPI,ingest,getStatuses} from "../src/index.js";
+import {readFileSync} from "node:fs";
 
 test("Eight official sources are registered and all use HTTPS",()=>{
  assert.equal(SOURCES.length,8);
@@ -82,4 +83,14 @@ test("no D1 binding fails closed",async()=>{
 test("HTTP writes to status APIs are not allowed",async()=>{
  const r=await handleAPI(new Request("https://watchtower.test/api/push/config",{method:"POST"}),{});
  assert.equal(r.status,405);
+});
+
+test("Wrangler cron configuration uses valid five-field syntax",()=>{
+ const config=JSON.parse(readFileSync(new URL("../wrangler.jsonc",import.meta.url),"utf8"));
+ assert.equal(config.name,"watchtower-free");
+ assert.equal(config.d1_databases[0].binding,"DB");
+ for(const expr of config.triggers.crons){
+  const fields=expr.trim().split(/\\s+/);
+  assert.equal(fields.length,5,"Invalid cron expression: "+expr);
+ }
 });
