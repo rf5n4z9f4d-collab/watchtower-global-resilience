@@ -167,7 +167,7 @@ test('last checked time is grounded in actual source attempts rather than API re
  }finally{dom.window.close();}
 });
 
-test('Worldwide notification mode hides nearby distance; nearby mode reveals it',async()=>{
+test('Cloudflare notification mode keeps nearby distance disabled until supported',async()=>{
  const {dom,d,w}=await bootstrap();
  try{
   const style=d.createElement('style');style.textContent=css;d.head.appendChild(style);
@@ -175,8 +175,8 @@ test('Worldwide notification mode hides nearby distance; nearby mode reveals it'
   assert.equal(row.hidden,true);
   assert.equal(w.getComputedStyle(row).display,'none');
   change(w,d,'pushMode','nearby');
-  assert.equal(row.hidden,false);
-  assert.notEqual(w.getComputedStyle(row).display,'none');
+  assert.equal(row.hidden,true);
+  assert.equal(w.getComputedStyle(row).display,'none');
   change(w,d,'pushMode','global');
   assert.equal(row.hidden,true);
   assert.equal(w.getComputedStyle(row).display,'none');

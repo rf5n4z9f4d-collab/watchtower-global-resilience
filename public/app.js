@@ -60,7 +60,7 @@ function render(){
  const checkTimes=states.map(s=>Number(s.checkedAt)).filter(t=>Number.isFinite(t)&&t>0);
  $('metricTime').textContent=checkTimes.length?new Date(Math.max(...checkTimes)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Not verified';
  setSystem(live);
- $('sourceList').innerHTML=states.length?states.map(s=>'<div class="source-row"><div><a href="'+safeUrl((sourcePages[s.id]||{}).page)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a><small>'+esc(s.scope)+' · '+(s.count||0)+' records · '+(s.checkedAt?'Last attempt '+when(s.checkedAt):'No fetch attempt')+' · '+(s.lastSuccess?'Last success '+when(s.lastSuccess):'No successful fetch')+'</small></div><span class="state '+esc(s.status)+'">'+esc(s.status)+'</span></div>').join(''):'No feed statuses available.';
+ $('sourceList').innerHTML=states.length?states.map(s=>'<div class="source-row"><div><a href="'+safeUrl((sourcePages[s.id]||{}).page)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a><small>'+esc(s.scope)+' · '+(s.count==null?'Count not provided':s.count+' records')+' · '+(s.checkedAt?'Last attempt '+when(s.checkedAt):'No fetch attempt')+' · '+(s.lastSuccess?'Last success '+when(s.lastSuccess):'No successful fetch')+'</small></div><span class="state '+esc(s.status)+'">'+esc(s.status)+'</span></div>').join(''):'No feed statuses available.';
  const q=$('search').value.trim().toLowerCase(),cat=$('categoryFilter').value,sev=$('severityFilter').value,hrs=$('timeFilter').value;
  const levels={advisory:0,moderate:1,high:2,critical:3};
  const filtered=alerts.filter(a=>(cat==='all'||a.category===cat)&&(sev==='all'||levels[a.severity]>=levels[sev])&&(hrs==='all'||(a.date&&Date.now()-Date.parse(a.date)>=0&&Date.now()-Date.parse(a.date)<Number(hrs)*3600000))&&(!q||[a.title,a.summary,a.location,a.category,a.source].join(' ').toLowerCase().includes(q)));
@@ -111,60 +111,7 @@ async function load(){
 for(const id of ['search','categoryFilter','severityFilter','timeFilter'])$(id).addEventListener(id==='search'?'input':'change',render);
 $('refresh').addEventListener('click',load);
 setInterval(load,300000);load();
-const statusMessage=(msg,bad=false)=>{$('pushResult').textContent=msg;$('pushResult').style.color=bad?'#ffb38e':'#9ee8cf';};
-async function updatePush(){
- try{
-  const r=await fetch('/api/push/config',{cache:'no-store'});pushConfig=await r.json();
-  const supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
-  $('pushPill').textContent=pushConfig.configured?'SERVER CONFIGURED':'SETUP REQUIRED';
-  const msg=pushConfig.configured?'Push server is configured. Install this website on your Home Screen on iPhone, then enable alerts.':'Push is not yet active: administrator must configure server push keys and persistent database. Dashboard monitoring still works.';
-  $('pushMessage').textContent=msg;
-  $('pushMessage').classList.toggle('warn',!pushConfig.configured);
-  $('subscribe').disabled=!pushConfig.configured||!supported;
-  $('testPush').disabled=!pushConfig.configured||!supported;
-  $('unsubscribe').disabled=!pushConfig.configured||!supported;
-  if(pushConfig.configured&&supported){const reg=await navigator.serviceWorker.register('/sw.js');currentSub=await reg.pushManager.getSubscription();if(currentSub)statusMessage('This device has an existing browser subscription.');}
-  else if(!supported)statusMessage('Your browser does not support this notification method. On iPhone, open WATCHTOWER from its Home Screen icon.',true);
- }catch(e){statusMessage('Could not check phone alerts: '+e.message,true);}
-}
-$('pushMode').addEventListener('change',()=>{$('radiusRow').hidden=$('pushMode').value!=='nearby';});
-const base64ToBytes=b=>{const safe=b.replace(/-/g,'+').replace(/_/g,'/');const raw=atob(safe+'='.repeat((4-safe.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0));};
-const post=async(endpoint,body)=>{const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const json=await r.json();if(!r.ok)throw Error(json.error||'Request failed');return json;};
-const storedPrefs=readSaved('wt-prefs',null);
-if(storedPrefs){
- $('pushSeverity').value=storedPrefs.minSeverity||'high';$('pushMode').value=storedPrefs.mode||'global';$('pushRadius').value=String(storedPrefs.radiusKm||100);
- $('radiusRow').hidden=$('pushMode').value!=='nearby';
- document.querySelectorAll('#categoryChecks input').forEach(el=>el.checked=(storedPrefs.categories||[]).includes(el.value));
-}
-$('subscribe').addEventListener('click',async()=>{
- $('subscribe').disabled=true;statusMessage('Requesting permission and registering phone…');
- try{
-  if(!pushConfig.configured)throw Error('Server is not configured');
-  if(!('serviceWorker' in navigator)||!('PushManager' in window))throw Error('Push is not supported in this browser');
-  if(Notification.permission==='denied')throw Error('Notifications are blocked in device settings');
-  const permit=await Notification.requestPermission();if(permit!=='granted')throw Error('Notification permission was not granted');
-  const categories=[...document.querySelectorAll('#categoryChecks input:checked')].map(e=>e.value);
-  const prefs={categories,minSeverity:$('pushSeverity').value,mode:$('pushMode').value,radiusKm:Number($('pushRadius').value)};
-  if(prefs.mode==='nearby'){
-   if(!navigator.geolocation)throw Error('Location is unavailable on this device');
-   const position=await new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{enableHighAccuracy:false,timeout:12000,maximumAge:300000}));
-   prefs.lat=position.coords.latitude;prefs.lon=position.coords.longitude;
-  }
-  const reg=await navigator.serviceWorker.ready;
-  let sub=await reg.pushManager.getSubscription();
-  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64ToBytes(pushConfig.publicKey)});
-  await post('/api/push/subscribe',{subscription:sub.toJSON(),preferences:prefs});currentSub=sub;
-  writeSaved('wt-prefs',{...prefs,lat:null,lon:null});
-  statusMessage('Phone subscribed. Tap Send test to check on-device delivery. This is not a substitute for local emergency alerts.');
- }catch(e){statusMessage(e.message,true)}
- finally{$('subscribe').disabled=false;}
-});
-$('unsubscribe').addEventListener('click',async()=>{
- try{const reg=await navigator.serviceWorker.ready;const s=await reg.pushManager.getSubscription();if(s){await post('/api/push/unsubscribe',{endpoint:s.endpoint});await s.unsubscribe();}currentSub=null;statusMessage('Notifications disabled for this browser.');}
- catch(e){statusMessage(e.message,true);}
-});
-$('testPush').addEventListener('click',async()=>{
- try{const reg=await navigator.serviceWorker.ready;const s=await reg.pushManager.getSubscription();if(!s)throw Error('Enable notifications first');await post('/api/push/test',{endpoint:s.endpoint});statusMessage('Test sent to push service. Check your phone; delivery is not guaranteed.');}
- catch(e){statusMessage(e.message,true);}
-});
-updatePush();
+// Initial disabled state; cloudflare-push.js enables controls only after verified server configuration.
+$('subscribe').disabled=$('unsubscribe').disabled=$('testPush').disabled=true;
+$('pushPill').textContent='SETUP REQUIRED';
+$('pushMessage').textContent='Push is not yet active until Cloudflare and OneSignal are configured.';

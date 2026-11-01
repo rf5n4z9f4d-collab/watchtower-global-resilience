@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "watchtower-free",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-30",
+  "workers_dev": true,
+  "assets": {
+    "directory": "../public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "triggers": {"crons": ["* * * * *"]},
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "watchtower-free",
+    "database_id": "d8afd6c2-90bc-469b-b05a-6087127d4a82",
+    "migrations_dir": "migrations"
+  }],
+  "vars": {
+    "ONESIGNAL_APP_ID": "",
+    "PUSH_ENABLED": "false"
+  }
+}
