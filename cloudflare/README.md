@@ -25,7 +25,7 @@ No free platform is an emergency-grade service-level agreement. Keep official go
 3. From the cloudflare directory run: npm install ; npm run check
 4. Sign in with: npx wrangler login
 5. Create a free D1 database: npx wrangler d1 create watchtower-free
-6. Replace the placeholder all-zero UUID 00000000-0000-0000-0000-000000000000 in cloudflare/wrangler.jsonc with the returned real database UUID. Do not deploy before replacing it.
+6. The D1 database ID in cloudflare/wrangler.jsonc has been set to the newly created watchtower-free database. Do not create another D1 database. Apply the SQL migration to that database before deploying.
 7. Apply schema: npx wrangler d1 migrations apply watchtower-free --remote
 8. Publish a push-disabled preview: npx wrangler deploy. Check /api/status, /api/alerts and /api/push/config on the new workers.dev URL. Keep Render running.
 9. Create a separate OneSignal FREE Web Push app for this exact HTTPS workers.dev origin. Existing subscriptions on Render will not transfer across origins.
