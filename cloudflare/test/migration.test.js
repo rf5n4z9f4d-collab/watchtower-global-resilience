@@ -90,7 +90,7 @@ test("Wrangler cron configuration uses valid five-field syntax",()=>{
  assert.equal(config.name,"watchtower-free");
  assert.equal(config.d1_databases[0].binding,"DB");
  for(const expr of config.triggers.crons){
-  const fields=expr.trim().split(/\\s+/);
+  const fields=expr.trim().split(/\s+/);
   assert.equal(fields.length,5,"Invalid cron expression: "+expr);
  }
 });
