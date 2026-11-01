@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS incidents (
  last_seen INTEGER NOT NULL,
  notify_status TEXT NOT NULL DEFAULT 'skipped',
  notify_key TEXT,
+ notify_checked_at INTEGER,
  notify_attempts INTEGER NOT NULL DEFAULT 0,
  notify_last_error TEXT,
  notified_at INTEGER
