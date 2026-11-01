@@ -13,7 +13,7 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "watchtower-free",
-    "database_id": "00000000-0000-0000-0000-000000000000",
+    "database_id": "d8afd6c2-90bc-469b-b05a-6087127d4a82",
     "migrations_dir": "migrations"
   }],
   "vars": {
